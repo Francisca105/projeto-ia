@@ -106,6 +106,19 @@ class PipeMania(Problem):
 
 if __name__ == "__main__":
     # TODO:
+    def ler_arquivo(nome_arquivo):
+        with open(nome_arquivo, 'r') as arquivo:
+            linhas = arquivo.readlines()
+        return linhas
+
+    # Maybe nao funfa
+    nome_arquivo = input()
+    linhas_do_arquivo = ler_arquivo(nome_arquivo)
+
+    # Agora você pode processar as linhas do arquivo conforme necessário
+    for linha in linhas_do_arquivo:
+        print(linha.strip())  # strip() remove espaços em branco extras, como '\n'
+
     # Ler o ficheiro do standard input,
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,

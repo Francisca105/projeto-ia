@@ -35,22 +35,39 @@ class PipeManiaState:
 class Board:
     """Representação interna de um tabuleiro de PipeMania."""
 
+    # Added this method
+    def __init__(self, board, n):
+        """Construtor da classe Board"""
+        self.board = board
+        self.n = n
+
     def get_value(self, row: int, col: int) -> str:
         """Devolve o valor na respetiva posição do tabuleiro."""
-        # TODO
-        pass
+        index = (row - 1) * self.n + (col - 1)
+        if index >= 0 and index < self.n**2:
+            return self.board[index]
+        else:
+            return "None"
 
-    def adjacent_vertical_values(self, row: int, col: int) -> (str, str):
+    def adjacent_vertical_values(self, row: int, col: int) -> (str, str): # type: ignore
         """Devolve os valores imediatamente acima e abaixo,
         respectivamente."""
-        # TODO
-        pass
+        index = (row - 1) * self.n + (col - 1)
+        index_above = index - self.n
+        above = self.board[index_above] if index_above >= 0 and index_above < self.n**2 else "None"
+        index_below = index + self.n
+        below = self.board[index_below] if index_below >= 0 and index_below < self.n**2 else "None"
+        return (above, below)
 
-    def adjacent_horizontal_values(self, row: int, col: int) -> (str, str):
+    def adjacent_horizontal_values(self, row: int, col: int) -> (str, str): # type: ignore
         """Devolve os valores imediatamente à esquerda e à direita,
         respectivamente."""
-        # TODO
-        pass
+        index = (row - 1) * self.n + (col - 1)
+        index_left = index - 1
+        left = self.board[index_left] if index_left >= 0 and index_left < self.n**2 else "None"
+        index_right = index + 1
+        right = self.board[index_right] if index_right >= 0 and index_right < self.n**2 else "None"
+        return (left, right)
 
     @staticmethod
     def parse_instance():
@@ -63,8 +80,11 @@ class Board:
             > from sys import stdin
             > line = stdin.readline().split()
         """
-        # TODO
-        pass
+        board = input().split()
+        n = len(board)
+        for _ in range(n-1):
+            board = board + input().split()
+        return Board(board, n)
 
     # TODO: outros metodos da classe
 
@@ -105,22 +125,10 @@ class PipeMania(Problem):
 
 
 if __name__ == "__main__":
-    # TODO:
-    def ler_arquivo(nome_arquivo):
-        with open(nome_arquivo, 'r') as arquivo:
-            linhas = arquivo.readlines()
-        return linhas
-
-    # Maybe nao funfa
-    nome_arquivo = input()
-    linhas_do_arquivo = ler_arquivo(nome_arquivo)
-
-    # Agora você pode processar as linhas do arquivo conforme necessário
-    for linha in linhas_do_arquivo:
-        print(linha.strip())  # strip() remove espaços em branco extras, como '\n'
-
     # Ler o ficheiro do standard input,
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,
     # Imprimir para o standard output no formato indicado.
+
+    board = Board.parse_instance()
     pass

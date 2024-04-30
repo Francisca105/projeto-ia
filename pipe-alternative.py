@@ -6,6 +6,8 @@
 # 105901 Francisca Almeida
 # 106943 José Frazão
 
+pieces = ['FC', 'FE', 'FB', 'FD', 'BC', 'BE', 'BB', 'BD', 'VC', 'VE', 'VB', 'VD', 'LV', 'LH']
+
 import sys
 from search import (
     Problem,
@@ -44,7 +46,7 @@ class Board:
     def get_value(self, row: int, col: int) -> str:
         """Devolve o valor na respetiva posição do tabuleiro."""
         if row > 0 and row <= self.n and col > 0 and col <= self.n:
-            return self.board[row - 1][col - 1]
+            return pieces[self.board[row - 1][col - 1]]
         else:
             return "None"
 
@@ -52,18 +54,18 @@ class Board:
         """Devolve os valores imediatamente acima e abaixo,
         respectivamente."""
         above_valid = (row - 1) > 0 and (row - 1) <= self.n and col > 0 and col <= self.n
-        above = self.board[row - 1][col] if above_valid else "None"
+        above = pieces[self.board[row - 1][col]] if above_valid else "None"
         below_valid = (row + 1) > 0 and (row + 1) <= self.n and col > 0 and col <= self.n
-        below = self.board[row + 1][col] if below_valid else "None"
+        below = pieces[self.board[row + 1][col]] if below_valid else "None"
         return (above, below)
 
     def adjacent_horizontal_values(self, row: int, col: int) -> (str, str): # type: ignore
         """Devolve os valores imediatamente à esquerda e à direita,
         respectivamente."""
         left_valid = (col - 1) > 0 and (col - 1) <= self.n and row > 0 and row <= self.n
-        left = self.board[row][col - 1] if left_valid else "None"
+        left = pieces[self.board[row][col - 1]] if left_valid else "None"
         right_valid = (col + 1) > 0 and (col + 1) <= self.n and row > 0 and row <= self.n
-        right = self.board[row][col + 1] if right_valid else "None"
+        right = pieces[self.board[row][col + 1]] if right_valid else "None"
         return (left, right)
 
     @staticmethod
@@ -78,10 +80,18 @@ class Board:
             > line = stdin.readline().split()
         """
         board = []
-        board.append(input().split())
-        n = len(board[0])
+        row = input().split()
+        row_indexes = []
+        for piece in row:
+            row_indexes.append(pieces.index(piece))
+        board.append(row_indexes)
+        n = len(row)
         for _ in range(n - 1):
-            board.append(input().split())
+            row = input().split()
+            row_indexes = []
+            for piece in row:
+                row_indexes.append(pieces.index(piece))
+            board.append(row_indexes)
         return Board(board, n)
 
     # TODO: outros metodos da classe
@@ -91,8 +101,8 @@ class Board:
         output = ''
         for row in range(self.n):
             for col in range(self.n - 1):
-                output += self.board[row][col] + '\t'
-            output += self.board[row][col + 1] + '\n'
+                output += pieces[self.board[row][col]] + '\t'
+            output += pieces[self.board[row][col + 1]] + '\n'
         return output[:-1]
 
 

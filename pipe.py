@@ -6,7 +6,6 @@
 # 105901 Francisca Almeida
 # 106943 José Frazão
 
-import sys
 from search import (
     Problem,
     Node,

@@ -45,24 +45,24 @@ class Board:
         if row >= 0 and row < self.n and col >= 0 and col < self.n:
             return self.board[row][col]
         else:
-            return "None"
+            return None
 
     def adjacent_vertical_values(self, row: int, col: int) -> (str, str): # type: ignore
         """Devolve os valores imediatamente acima e abaixo,
         respectivamente."""
         above_valid = (row - 1) >= 0 and (row - 1) < self.n and col >= 0 and col < self.n
-        above = self.board[row - 1][col] if above_valid else "None"
+        above = self.board[row - 1][col] if above_valid else None
         below_valid = (row + 1) >= 0 and (row + 1) < self.n and col >= 0 and col < self.n
-        below = self.board[row + 1][col] if below_valid else "None"
+        below = self.board[row + 1][col] if below_valid else None
         return (above, below)
 
     def adjacent_horizontal_values(self, row: int, col: int) -> (str, str): # type: ignore
         """Devolve os valores imediatamente à esquerda e à direita,
         respectivamente."""
         left_valid = (col - 1) >= 0 and (col - 1) < self.n and row >= 0 and row < self.n
-        left = self.board[row][col - 1] if left_valid else "None"
+        left = self.board[row][col - 1] if left_valid else None
         right_valid = (col + 1) >= 0 and (col + 1) < self.n and row >= 0 and row < self.n
-        right = self.board[row][col + 1] if right_valid else "None"
+        right = self.board[row][col + 1] if right_valid else None
         return (left, right)
 
     @staticmethod

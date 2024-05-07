@@ -6,6 +6,7 @@
 # 105901 Francisca Almeida
 # 106943 José Frazão
 
+import sys
 from search import (
     Problem,
     Node,
@@ -39,30 +40,31 @@ class Board:
         """Construtor da classe Board"""
         self.pieces = board
         self.n = n
+        self.last = (0, 0)
 
     def get_value(self, row: int, col: int) -> str:
         """Devolve o valor na respetiva posição do tabuleiro."""
         if row >= 0 and row < self.n and col >= 0 and col < self.n:
             return self.pieces[row][col]
         else:
-            return None
+            return "None"
 
     def adjacent_vertical_values(self, row: int, col: int) -> (str, str): # type: ignore
         """Devolve os valores imediatamente acima e abaixo,
         respectivamente."""
         above_valid = (row - 1) >= 0 and (row - 1) < self.n and col >= 0 and col < self.n
-        above = self.pieces[row - 1][col] if above_valid else None
+        above = self.pieces[row - 1][col] if above_valid else "None"
         below_valid = (row + 1) >= 0 and (row + 1) < self.n and col >= 0 and col < self.n
-        below = self.pieces[row + 1][col] if below_valid else None
+        below = self.pieces[row + 1][col] if below_valid else "None"
         return (above, below)
 
     def adjacent_horizontal_values(self, row: int, col: int) -> (str, str): # type: ignore
         """Devolve os valores imediatamente à esquerda e à direita,
         respectivamente."""
         left_valid = (col - 1) >= 0 and (col - 1) < self.n and row >= 0 and row < self.n
-        left = self.pieces[row][col - 1] if left_valid else None
+        left = self.pieces[row][col - 1] if left_valid else "None"
         right_valid = (col + 1) >= 0 and (col + 1) < self.n and row >= 0 and row < self.n
-        right = self.pieces[row][col + 1] if right_valid else None
+        right = self.pieces[row][col + 1] if right_valid else "None"
         return (left, right)
 
     @staticmethod
@@ -106,11 +108,15 @@ class PipeMania(Problem):
         partir do estado passado como argumento."""
         # TODO        
         actions = []
-        board = state.board.pieces
-        for i in range(state.board.n):
-            for j in range(state.board.n):
-                actions.append((i, j, True))
-                actions.append((i, j, False))
+        last = state.board.last
+        if state.board.last[0] == state.board.n:
+            return actions
+        actions.append((last[0], last[1], 1))
+        actions.append((last[0], last[1], 2))
+        actions.append((last[0], last[1], 3))
+        state.board.last = (state.board.last[0], state.board.last[1] + 1)
+        if state.board.last[1] == state.board.n:
+            state.board.last = (state.board.last[0] + 1, 0)
         return actions
 
     def result(self, state: PipeManiaState, action):
@@ -123,7 +129,7 @@ class PipeMania(Problem):
         piece_type = piece[0]
         piece_orientation = piece[1]
 
-        if (action[2]):
+        if action[2] == 1:
             if piece_orientation == 'C':
                 piece_orientation = 'D'
             elif piece_orientation == 'D':
@@ -136,7 +142,16 @@ class PipeMania(Problem):
                 piece_orientation = 'H'
             elif piece_orientation == 'H':
                 piece_orientation = 'V'
-        else:
+        elif action[2] == 2:
+            if piece_orientation == 'C':
+                piece_orientation = 'B'
+            elif piece_orientation == 'D':
+                piece_orientation = 'E'
+            elif piece_orientation == 'B':
+                piece_orientation = 'C'
+            elif piece_orientation == 'E':
+                piece_orientation = 'D'
+        elif action[2] == 3:
             if piece_orientation == 'C':
                 piece_orientation = 'E'
             elif piece_orientation == 'E':
@@ -199,4 +214,13 @@ if __name__ == "__main__":
     # Retirar a solução a partir do nó resultante,
     # Imprimir para o standard output no formato indicado.
 
+    # Ler grelha do figura 1a:
+    board = Board.parse_instance()
+    # Criar uma instância de PipeMania:
+    problem = PipeMania(board)
+    # Obter o nó solução usando a procura em profundidade:
+    goal_node = depth_first_tree_search(problem)
+    # Verificar se foi atingida a solução
+    print("Is goal?", problem.goal_test(goal_node.state))
+    print("Solution:\n", goal_node.state.board.print(), sep="")
     pass

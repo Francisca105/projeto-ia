@@ -17,10 +17,13 @@ from search import (
     recursive_best_first_search,
 )
 
-pieces_dict = {'BC':(1, 0, 1, 1), 'BB':(0, 1, 1, 1), 'BE':(1, 1, 1, 0), 'BD':(1, 1, 0, 1),
-             'FC':(1, 0, 0, 0), 'FB':(0, 1, 0, 0), 'FE':(0, 0, 1, 0), 'FD':(0, 0, 0, 1),
-             'VC':(1, 0, 1, 0), 'VB':(0, 1, 0, 1), 'VE':(0, 1, 1, 0), 'VD':(1, 0, 1, 0),
-             'LV':(1, 1, 0, 0), 'LH':(0, 0, 1, 1)}
+pieces_dict = {'BC':(True, False, True, True), 'BB':(False, True, True, True),
+               'BE':(True, True, True, False), 'BD':(True, True, False, True),
+               'FC':(True, False, False, False), 'FB':(False, True, False, False),
+               'FE':(False, False, True, False), 'FD':(False, False, False, True),
+               'VC':(True, False, True, False), 'VB':(False, True, False, True),
+               'VE':(False, True, True, False), 'VD':(True, False, True, False),
+               'LV':(True, True, False, False), 'LH':(False, False, True, True)}
 
 
 class PipeManiaState:
@@ -114,13 +117,15 @@ class Board:
     def get_type(self, row: int, col: int) -> str:
         """Devolve o tipo da peça na respetiva posição do tabuleiro."""
         if 0 <= row < self.size and 0 <= col < self.size:
-            return self.pieces[row][col][0]
-        return None
-    
-    def get_orientation(self, row: int, col: int) -> str:
-        """Devolve a orientação da peça na respetiva posição do tabuleiro."""
-        if 0 <= row < self.size and 0 <= col < self.size:
-            return self.pieces[row][col][1]
+            piece = self.pieces[row][col]
+            if sum(piece) == 1:
+                return 'F'
+            elif sum(piece) == 3:
+                return 'B'
+            elif piece[0] + piece[1] == 2 or piece[2] + piece[3] == 2:
+                return 'L'
+            else:
+                return 'V'
         return None
 
     def adjacent_vertical_pieces(self, row: int, col: int) -> tuple[str, str]:

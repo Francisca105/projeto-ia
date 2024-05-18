@@ -38,7 +38,7 @@ piece_to_str = {(True, False, True, True):'BC', (False, True, True, True):'BB',
 
 type_to_piece = {'F':[(True, False, False, False), (False, True, False, False), (False, False, True, False), (False, False, False, True)],
                  'B':[(True, False, True, True), (False, True, True, True), (True, True, True, False), (True, True, False, True)],
-                 'V':[(True, False, True, False), (False, True, False, True), (False, True, True, False), (True, False, True, False)],
+                 'V':[(True, False, True, False), (False, True, False, True), (False, True, True, False), (True, False, False, True)],
                  'L':[(True, True, False, False), (False, False, True, True)]}
 
 
@@ -61,9 +61,33 @@ class Board:
         """Construtor da classe Board."""
         self.pieces = pieces
         self.size = len(pieces)
+        self.invalid = False
 
     def compute_initial(self):
         """Define o estado inicial de um tabuleiro."""
+        def spiral_order():
+            top, bottom = 0, self.size - 1
+            left, right = 0, self.size - 1
+
+            while top <= bottom and left <= right:
+                for i in range(left, right + 1):
+                    self.update_possibilities(top, i)
+                top += 1
+
+                for i in range(top, bottom + 1):
+                    self.update_possibilities(i, right)
+                right -= 1
+
+                if top <= bottom:
+                    for i in range(right, left - 1, -1):
+                        self.update_possibilities(bottom, i)
+                    bottom -= 1
+
+                if left <= right:
+                    for i in range(bottom, top - 1, -1):
+                        self.update_possibilities(i, left)
+                    left += 1
+
         self.locked_pieces = {(-1, -1)}
         self.possibilities = {}
         self.remaining_pieces = [set(), set(), set()]
@@ -75,15 +99,62 @@ class Board:
             for j in range(self.size):
                 if (i, j) not in self.locked_pieces:
                     if (i, j) not in self.possibilities:
-                        self.possibilities.update({(i, j):type_to_piece[self.get_type(i, j)]})
+                        aux = type_to_piece[self.get_type(i, j)]
+                        temp = [x for x in aux]
+                        self.possibilities.update({(i, j):temp})
                     self.remaining_pieces[len(self.possibilities[(i, j)]) - 2].add((i, j))
 
-        for i in range(self.size):
-            for j in range(self.size):
-                if (i, j) not in self.locked_pieces:
-                    self.update_possibilities_multiple(i, j)
+        spiral_order()
 
         return self
+    
+    def new_board(self, row, col, piece):
+        pieces = self.pieces
+        new_row = pieces[row][:col] + (piece,) + pieces[row][col + 1 :]
+        new_pieces = pieces[:row] + (new_row,) + pieces[row + 1 :]
+        new_board = Board(new_pieces)
+        new_board.locked_pieces = self.locked_pieces.copy()
+        new_board.possibilities = self.possibilities.copy()
+        new_board.remaining_pieces = self.remaining_pieces.copy()
+        new_board.locked_pieces.add((row, col))
+        new_board.possibilities.pop((row, col), None)
+        for _ in new_board.remaining_pieces:
+            _.discard((row, col))
+        return new_board
+    
+    def a(self, piece, other, direction):
+        if other not in self.locked_pieces:
+            return False
+        inverse_direction = direction + 1 if not direction % 2 else direction - 1
+        n = len(self.possibilities[piece])
+        other_possibilities = self.get_piece(other[0], other[1])
+        for _ in self.possibilities[piece]:
+            if other_possibilities[inverse_direction] != _[direction]:
+                try:
+                    self.possibilities[piece].remove(_)
+                    if len(self.possibilities[piece]) == 1:
+                        self.set_piece(piece[0], piece[1], self.possibilities[piece][0])
+                        return True
+                    elif len(self.possibilities[piece]) == 0:
+                        self.invalid = True
+                        return True
+                except ValueError:
+                    pass
+        if len(self.possibilities[piece]) != n:
+            self.remaining_pieces[n - 2].discard(piece)
+            self.remaining_pieces[len(self.possibilities[piece]) - 2].add(piece)
+        return False
+
+    def update_possibilities(self, row, col):
+        if 0 <= row < self.size and 0 <= col < self.size and (row, col) not in self.locked_pieces:
+            adjacent = self.adjacent_coords(row, col)
+            direction = 0
+            for _ in adjacent:
+                if self.a((row, col), _, direction):
+                    for __ in adjacent:
+                        self.u
+                    return
+                direction += 1
 
     def get_type(self, row: int, col: int):
         """Devolve o tipo da peça na respetiva posição do tabuleiro."""
@@ -119,6 +190,8 @@ class Board:
         self.pieces = new_pieces
         self.locked_pieces.add((row, col))
         self.possibilities.pop((row, col), None)
+        for _ in self.remaining_pieces:
+            _.discard((row, col))
 
     def adjacent_vertical_pieces(self, row: int, col: int):
         """Devolve as peças imediatamente acima e abaixo,
@@ -222,38 +295,16 @@ class Board:
                 else:
                     self.possibilities.update({(_, size): [(True, False, True, False), (False, True, True, False)]})
 
-    def update_possibilities_single(self, other, possibilities, direction):
-        """Atualiza as rotações possíveis para a determinada peça consoante outra adjacente"""
-        if other in self.locked_pieces:
-            (row, col) = other
-            other = self.get_piece(row, col)
-            inverse_direction = direction + 1 if not direction % 2 else direction - 1
-            new_possibilities = list(filter(lambda x: other[inverse_direction] == x[direction], possibilities))
-            possibilities.clear()
-            possibilities.extend(new_possibilities)
-
-    def update_possibilities_multiple(self, row: int, col: int):
-        """Atualiza as rotações possíveis para a determinada peça consoante as adjacentes"""
-        if 0 <= row < self.size and 0 <= col <= self.size:
-            try:
-                possibilities = self.possibilities[(row, col)]
-            except KeyError:
-                return
-            num_possibilities = len(possibilities)
-            coords = self.adjacent_coords(row, col)
-            direction = 0
-            for _ in coords:
-                self.update_possibilities_single(_, possibilities, direction)
-                if len(possibilities) == 1:
-                    self.set_piece(row, col, possibilities[0])
-                    self.remaining_pieces[num_possibilities - 2].discard((row, col))
-                    # for __ in coords:
-                        # (new_row, new_col) = __
-                        # self.update_possibilities_multiple(new_row, new_col)
-                    return
-                direction += 1
-            self.remaining_pieces[num_possibilities - 2].discard((row, col))
-            self.remaining_pieces[len(possibilities) - 2].add((row, col))
+    def get_next_piece(self):
+        if len(self.remaining_pieces[0]) > 0:
+            for e in self.remaining_pieces[0]:
+                return e
+        elif len(self.remaining_pieces[1]) > 0:
+            for e in self.remaining_pieces[1]:
+                return e
+        else:
+            for e in self.remaining_pieces[2]:
+                return e
 
     @staticmethod
     def parse_instance():
@@ -290,17 +341,27 @@ class PipeMania(Problem):
     def actions(self, state: PipeManiaState):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
+        if state.board.invalid or len(state.board.locked_pieces) == state.board.size**2 + 1:
+            return []
+        coords = state.board.get_next_piece()
+        possibilities = state.board.possibilities[coords]
+        ret = []
+        for _ in possibilities:
+            ret.append((coords[0], coords[1], _))
+        return ret
 
     def result(self, state: PipeManiaState, action):
         """Retorna o estado resultante de executar a 'action' sobre
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
+        return PipeManiaState(state.board.new_board(action[0], action[1], action[2]))
 
     def goal_test(self, state: PipeManiaState):
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
+        return len(state.board.locked_pieces) == state.board.size**2 + 1
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
@@ -313,8 +374,7 @@ if __name__ == "__main__":
     # Imprimir para o standard output no formato indicado.
 
     board = Board.parse_instance()
-    print(board)
     problem = PipeMania(board)
-    # goal_node = depth_first_tree_search(problem)
-    # print(goal_node.state.board, end='')
+    goal_node = depth_first_tree_search(problem)
+    print(goal_node.state.board, end='')
     pass

@@ -134,7 +134,11 @@ class Board:
         new_board.remaining_pieces = [set(e) for e in self.remaining_pieces]
         new_board.remove_piece(row, col)
 
-        new_board.possibilities = self.possibilities.copy()
+        new_board.possibilities = {}
+        for e in self.possibilities.keys():
+            new_board.possibilities.update({e:[x for x in self.possibilities[e]]})
+        # new_board.possibilities = self.possibilities.copy()
+        new_board.remove_possibility(row, col)
         new_board.update_adjacent(row, col)
 
         return new_board
@@ -143,8 +147,8 @@ class Board:
         adjacent, direction = self.adjacent_coords(row, col), 0
         piece = self.get_piece(row, col)
         for (adj_row, adj_col) in adjacent:
+            inverse_direction = direction + 1 if not direction % 2 else direction - 1
             if (adj_row, adj_col) not in self.locked_pieces:
-                inverse_direction = direction + 1 if not direction % 2 else direction - 1
                 try:
                     other_possibilities = [e for e in self.possibilities[(adj_row, adj_col)]]
                 except KeyError:
@@ -156,6 +160,15 @@ class Board:
                 if len(self.possibilities[(adj_row, adj_col)]) == 1:
                     self.initial_set_piece(adj_row, adj_col, self.possibilities[(adj_row, adj_col)][0], True)
                 elif len(self.possibilities[(adj_row, adj_col)]) == 0:
+                    self.invalid = True
+                    return
+                else:
+                    new_possibilities = self.possibilities[(adj_row, adj_col)]
+                    self.remove_piece(adj_row, adj_col)
+                    self.remaining_pieces[len(new_possibilities) - 2].add((adj_row, adj_col))
+            else:
+                other = self.get_piece(adj_row, adj_col)
+                if other[inverse_direction] != piece[direction]:
                     self.invalid = True
                     return
             direction += 1
@@ -172,13 +185,16 @@ class Board:
                         try:
                             self.possibilities[(row, col)].remove(possibility)
                         except ValueError:
-                            pass
+                            continue
                 if len(self.possibilities[(row, col)]) == 1:
                     self.initial_set_piece(row, col, self.possibilities[(row, col)][0], True)
                     return
                 elif len(self.possibilities[(row, col)]) == 0:
                     self.invalid = True
                     return
+                new_possibilities = self.possibilities[(row, col)]
+                self.remove_piece(row, col)
+                self.remaining_pieces[len(new_possibilities) - 2].add((row, col))
             direction += 1
 
     def adjacent_vertical_pieces(self, row: int, col: int):
@@ -306,6 +322,26 @@ class Board:
                 else:
                     self.possibilities.update({(_, size):[(True, False, True, False), (False, True, True, False)]})
 
+    def check_goal(self):
+        rows = [False for _ in range(self.size)]
+        cols = [False for _ in range(self.size)]
+
+        for row in range(self.size):
+            for col in range(self.size):
+                piece = self.get_piece(row, col)
+                adjacent = [self.get_piece(e[0], e[1]) for e in self.adjacent_coords(row, col)]
+                if piece[0] and adjacent[0][1]:
+                    rows[row] = True
+                if piece[1] and adjacent[1][0]:
+                    rows[row] = True
+                if piece[2] and adjacent[2][3]:
+                    cols[col] = True
+                if piece[3] and adjacent[3][2]:
+                    cols[col] = True
+        for i in range(self.size):
+            if not rows[i] and not cols[i]:
+                return False
+        return True
     @staticmethod
     def parse_instance():
         """Lê o test do standard input (stdin) que é passado como argumento
@@ -361,7 +397,7 @@ class PipeMania(Problem):
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
-        return state.board.get_next_piece() == None
+        return state.board.get_next_piece() == None #and state.board.check_goal()
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""

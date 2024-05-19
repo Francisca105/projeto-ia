@@ -17,15 +17,14 @@ from search import (
     recursive_best_first_search,
 )
 
-
+                    # up  , down , left, right
 str_to_piece = {'BC':(True, False, True, True), 'BB':(False, True, True, True),
                 'BE':(True, True, True, False), 'BD':(True, True, False, True),
                 'FC':(True, False, False, False), 'FB':(False, True, False, False),
                 'FE':(False, False, True, False), 'FD':(False, False, False, True),
                 'VC':(True, False, True, False), 'VB':(False, True, False, True),
                 'VE':(False, True, True, False), 'VD':(True, False, False, True),
-                'LV':(True, True, False, False), 'LH':(False, False, True, True),
-                None:(False, False, False, False)}
+                'LV':(True, True, False, False), 'LH':(False, False, True, True)}
 
 piece_to_str = {(True, False, True, True):'BC', (False, True, True, True):'BB',
                 (True, True, True, False):'BE', (True, True, False, True):'BD',
@@ -45,6 +44,48 @@ type_to_piece = {'F':[(True, False, False, False), (False, True, False, False),
                  'L':[(True, True, False, False), (False, False, True, True)]}
 
 
+class Node:
+    """Representation of a double linked list node."""
+
+    def __init__(self, data, next=None, prev=None):
+        self.data = data
+        self.next = next
+        self.prev = prev
+
+
+class Queue:
+    """Representation of a FIFO using a double linked list."""
+
+    def __init__(self, head_data):
+        self.head = Node(head_data)
+        self.tail = self.head
+
+    def append(self, data):
+        """Appends an item at the end of the queue."""
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            self.tail = new_node
+        else:
+            self.tail.next = new_node
+            new_node.prev = self.tail
+            self.tail = new_node
+
+    def pop(self):
+        """Pops the first item of the queue."""
+        first = self.head
+        if self.head.next is not None:
+            self.head = self.head.next
+            self.head.prev = None
+        else:
+            self.head = None
+            self.tail = None
+        return first.data
+
+    def is_empty(self):
+        """Returns True if the queue is empty, False otherwise."""
+        return self.head is None
+
 class PipeManiaState:
     state_id = 0
 
@@ -58,17 +99,17 @@ class PipeManiaState:
 
 
 class Board:
-    """Representação interna de um tabuleiro de PipeMania."""
+    """Internal representation of a PipeMania board."""
 
     def __init__(self, pieces):
-        """Construtor da classe Board."""
         self.pieces = pieces
         self.size = len(pieces)
         self.invalid = False
 
     def get_type(self, row: int, col: int):
-        """Devolve o tipo da peça na respetiva posição do tabuleiro."""
-        def aux(piece):
+        """Returns the type of the given piece."""
+        def num_connections(piece) -> int:
+            """Returns the number of connections between the piece and its adjacent ones."""
             total = 0
             for direction in piece:
                 total = total + 1 if direction else total
@@ -76,9 +117,9 @@ class Board:
 
         if 0 <= row < self.size and 0 <= col < self.size:
             piece = self.get_piece(row, col)
-            if aux(piece) == 1:
+            if num_connections(piece) == 1:
                 return 'F'
-            elif aux(piece) == 3:
+            elif num_connections(piece) == 3:
                 return 'B'
             elif (piece[0] and piece[1]) or (piece[2] and piece[3]):
                 return 'L'
@@ -87,42 +128,52 @@ class Board:
         return None
 
     def get_next_piece(self):
+        """Returns the next piece to be locked."""
         for possibilities_level in self.remaining_pieces:
                 for piece in possibilities_level:
                     return piece
         return None
 
-    def remove_piece(self, row, col):
+    def remove_piece(self, row: int, col: int):
+        """Removes the given piece from the list of remaining ones."""
         for possibilities_level in self.remaining_pieces:
                 possibilities_level.discard((row, col))
 
-    def remove_possibility(self, row, col):
+    def remove_possibility(self, row:int, col: int):
+        """Removes the given piece possibilities."""
         try:
             self.possibilities.pop((row, col))
         except KeyError:
             pass
 
-    def pieces_remaining(self):
+    def pieces_remaining(self) -> int:
+        """Returns the number of remaining pieces to be locked."""
         return len(self.remaining_pieces[0]) + len(self.remaining_pieces[1])+ len(self.remaining_pieces[2])
 
     def get_piece(self, row: int, col: int):
-        """Devolve a peça na respetiva posição do tabuleiro."""
+        """Returns the piece in the given coords."""
         if 0 <= row < self.size and 0 <= col < self.size:
             return self.pieces[row][col]
         return (False, False, False, False)
 
-    def initial_set_piece(self, row, col, piece, cond):
+    def initial_set_piece(self, row, col, piece, condition):
+        """Locks the given piece in its place and updates the board."""
+        if self.invalid:
+            return
+
         pieces = self.pieces
         new_row = pieces[row][:col] + (piece,) + pieces[row][col + 1 :]
         new_pieces = pieces[:row] + (new_row,) + pieces[row + 1 :]
         self.pieces = new_pieces
         self.locked_pieces.add((row, col))
-        if cond:
+
+        if condition:
             self.remove_possibility(row, col)
             self.remove_piece(row, col)
             self.update_adjacent(row, col)
 
     def set_piece(self, row, col, piece):
+        """Creates a new board and lock the given piece in the given coordinates."""
         pieces = self.pieces
         new_row = pieces[row][:col] + (piece,) + pieces[row][col + 1 :]
         new_pieces = pieces[:row] + (new_row,) + pieces[row + 1 :]
@@ -137,13 +188,15 @@ class Board:
         new_board.possibilities = {}
         for e in self.possibilities.keys():
             new_board.possibilities.update({e:[x for x in self.possibilities[e]]})
-        # new_board.possibilities = self.possibilities.copy()
         new_board.remove_possibility(row, col)
         new_board.update_adjacent(row, col)
 
         return new_board
 
     def update_adjacent(self, row, col):
+        """Updates the adjacent pieces knowing that the given piece was locked.
+        If possible, it will also lock the adjacent pieces that can be locked.
+        It can also detect if the board is invalid."""
         adjacent, direction = self.adjacent_coords(row, col), 0
         piece = self.get_piece(row, col)
         for (adj_row, adj_col) in adjacent:
@@ -154,9 +207,11 @@ class Board:
                 except KeyError:
                     direction += 1
                     continue
+
                 for possibility in other_possibilities:
                     if possibility[inverse_direction] != piece[direction]:
                         self.possibilities[(adj_row, adj_col)].remove(possibility)
+
                 if len(self.possibilities[(adj_row, adj_col)]) == 1:
                     self.initial_set_piece(adj_row, adj_col, self.possibilities[(adj_row, adj_col)][0], True)
                 elif len(self.possibilities[(adj_row, adj_col)]) == 0:
@@ -174,56 +229,45 @@ class Board:
             direction += 1
 
     def update_own_possibility(self, row, col):
+        """Updates the given piece possibilities given its adjacent pieces.
+        If possible, it will also lock the piece. It can also detect if the board is invalid."""
         adjacent, direction = self.adjacent_coords(row, col), 0
         possibilities = [e for e in self.possibilities[(row, col)]]
         for (adj_row, adj_col) in adjacent:
             if (adj_row, adj_col) in self.locked_pieces:
                 inverse_direction = direction + 1 if not direction % 2 else direction - 1
                 other = self.get_piece(adj_row, adj_col)
+
                 for possibility in possibilities:
                     if possibility[direction] != other[inverse_direction]:
                         try:
                             self.possibilities[(row, col)].remove(possibility)
                         except ValueError:
                             continue
+
                 if len(self.possibilities[(row, col)]) == 1:
                     self.initial_set_piece(row, col, self.possibilities[(row, col)][0], True)
                     return
                 elif len(self.possibilities[(row, col)]) == 0:
                     self.invalid = True
                     return
+                
                 new_possibilities = self.possibilities[(row, col)]
                 self.remove_piece(row, col)
                 self.remaining_pieces[len(new_possibilities) - 2].add((row, col))
             direction += 1
 
     def adjacent_vertical_pieces(self, row: int, col: int):
-        """Devolve as peças imediatamente acima e abaixo,
-        respectivamente."""
+        """Returns the pieces immediately above and below the given piece."""
         return (self.get_piece(row - 1, col), self.get_piece(row + 1, col))
 
     def adjacent_horizontal_pieces(self, row: int, col: int):
-        """Devolve as peças imediatamente à esquerda e à direita,
-        respectivamente."""
+        """Returns the pieces immediately on the left and on the right of the given piece."""
         return (self.get_piece(row, col - 1), self.get_piece(row, col + 1))
 
-    def adjacent_vertical_coords(self, row: int, col: int):
-        """Devolve as coordenadas imediatamente acima e abaixo,
-        respectivamente."""
-        above = (-1, -1) if row + 1 < 0 else row + 1
-        below = (-1, -1) if row - 1 < 0 else row - 1
-        return ((above, col), (below, col))
-
-    def adjacent_horizontal_coords(self, row: int, col: int):
-        """Devolve as coordenadas imediatamente à esquerda e à direita,
-        respectivamente."""
-        left = (-1, -1) if col + 1 < 0 else col + 1
-        right = (-1, -1) if col - 1 < 0 else col - 1
-        return ((row, left), (row, right))
-
     def adjacent_coords(self, row: int, col: int):
-        """Devolve as peças imediatamente acima, abaixo, à esquerda e à direita,
-        respectivamente."""
+        """Returns the coordinates immediately above, below, on the left and on the
+        right of the given piece."""
         above = (-1, -1) if row - 1 < 0 else (row - 1, col)
         below = (-1, -1) if row + 1 < 0 else (row + 1, col)
         left = (-1, -1) if col - 1 < 0 else (row, col - 1)
@@ -231,30 +275,30 @@ class Board:
         return (above, below, left, right)
 
     def compute_initial(self):
+        """Computes the initial state of the board."""
         self.locked_pieces = {(-1, -1)}
         self.possibilities = {}
         self.remaining_pieces = [set(), set(), set()]
 
-        self.check_corners()
-        self.check_edges()
+        self.lock_corners()
+        self.lock_edges()
 
         for row in range(self.size):
             for col in range(self.size):
                 if (row, col) not in self.locked_pieces:
                     if (row, col) not in self.possibilities:
-                        self.possibilities.update({(row, col):[e for e in type_to_piece[self.get_type(row, col)]]}) # cursed mas acho que tem que ser assim
+                        self.possibilities.update({(row, col):[e for e in type_to_piece[self.get_type(row, col)]]})
                     self.remaining_pieces[len(self.possibilities[(row, col)]) - 2].add((row, col))
 
         for row in range(self.size):
             for col in range(self.size):
                 if (row, col) not in self.locked_pieces:
                     self.update_own_possibility(row, col)
-        # TODO: propagar restrições de possibilidades
 
         return self
 
-    def check_corners(self):
-        """Verifica se é possível bloquear as peças dos cantos logo no início."""
+    def lock_corners(self):
+        """Locks all the corner pieces that can be locked at the start."""
         size = self.size - 1
         if self.get_type(0, 0) == 'V':
             self.initial_set_piece(0, 0, (False, True, False, True), False)
@@ -273,8 +317,8 @@ class Board:
         else:
             self.possibilities.update({(size, size):[(True, False, False, False), (False, False, True, False)]})
 
-    def check_edges(self):
-        """Verifica se é possível bloquear as peças das bordas logo no início."""
+    def lock_edges(self):
+        """Locks all the edge pieces that can be locked at the start."""
         size = self.size - 1
         for _ in range(1,size):
             piece_type = self.get_type(0, _)
@@ -288,6 +332,7 @@ class Board:
                     self.possibilities.update({(0, _):[(False, True, False, False), (False, False, True, False), (False, False, False, True)]})
                 else:
                     self.possibilities.update({(0, _):[(False, True, True, False), (False, True, False, True)]})
+
             piece_type = self.get_type(_, 0)
             if piece_type == 'B' or piece_type == 'L':
                 if piece_type == 'B':
@@ -299,6 +344,7 @@ class Board:
                     self.possibilities.update({(_, 0):[(True, False, False, False), (False, True, False, False), (False, False, False, True)]})
                 else:
                     self.possibilities.update({(_, 0):[(True, False, False, True), (False, True, False, True)]})
+            
             piece_type = self.get_type(size, _)
             if piece_type == 'B' or piece_type == 'L':
                 if piece_type == 'B':
@@ -310,6 +356,7 @@ class Board:
                     self.possibilities.update({(size, _):[(True, False, False, False), (False, False, True, False), (False, False, False, True)]})
                 else:
                     self.possibilities.update({(size, _):[(True, False, True, False), (True, False, False, True)]})
+            
             piece_type = self.get_type(_, size)
             if piece_type == 'B' or piece_type == 'L':
                 if piece_type == 'B':
@@ -322,30 +369,45 @@ class Board:
                 else:
                     self.possibilities.update({(_, size):[(True, False, True, False), (False, True, True, False)]})
 
-    def check_goal(self):
-        rows = [False for _ in range(self.size)]
-        cols = [False for _ in range(self.size)]
+    def get_adjacent(self, row, col):
+        """Returns all the adjacent coordinates that connect with the given piece."""
+        piece = self.get_piece(row, col)
+        adjacent = self.adjacent_coords(row, col)
+        ret = []
+        for i in range(4):
+            if piece[i]:
+                ret.append(adjacent[i])
+        return ret
 
-        for row in range(self.size):
-            for col in range(self.size):
-                piece = self.get_piece(row, col)
-                adjacent = [self.get_piece(e[0], e[1]) for e in self.adjacent_coords(row, col)]
-                if piece[0] and adjacent[0][1]:
-                    rows[row] = True
-                if piece[1] and adjacent[1][0]:
-                    rows[row] = True
-                if piece[2] and adjacent[2][3]:
-                    cols[col] = True
-                if piece[3] and adjacent[3][2]:
-                    cols[col] = True
+    def check_goal(self) -> bool:
+        """Returns True if the current board is the solution, False otherwise.
+        It uses a BFS to check if all the pieces are connected."""
+        visited = [[False] * self.size for _ in range(self.size)]
+        visited[0][0] = True
+        queue = Queue((0, 0))
+
+        while not queue.is_empty():
+            (current_row, current_col) = queue.pop()
+            for (row, col) in self.get_adjacent(current_row, current_col):
+                if not visited[row][col]:
+                    visited[row][col] = True
+                    queue.append((row, col))
+
         for i in range(self.size):
-            if not rows[i] and not cols[i]:
-                return False
+            for j in range(self.size):
+                if not visited[i][j]:
+                    return False
+
         return True
+
+    def num_locked_pieces(self):
+        """Returns the number of locked pieces."""
+        return len(self.locked_pieces)
+
     @staticmethod
     def parse_instance():
-        """Lê o test do standard input (stdin) que é passado como argumento
-        e retorna uma instância da classe Board."""
+        """Reads the text from stdin that is passed as an argument and returns
+        an instance of the Board class.."""
         input_grid = [tuple(input().strip().split())]
         for _ in range(len(input_grid[0]) - 1):
             input_grid.append(tuple(input().strip().split()))
@@ -358,7 +420,7 @@ class Board:
         return Board(tuple(pieces)).compute_initial()
 
     def __str__(self):
-        """Devolve a representação do tabuleiro como uma string."""
+        """Returns the board representation as a string."""
         output = ''
         for row in range(self.size):
             for col in range(self.size):
@@ -372,47 +434,41 @@ class Board:
 
 class PipeMania(Problem):
     def __init__(self, board: Board):
-        """O construtor especifica o estado inicial."""
+        """The constructor specifies the initial state."""
         state = PipeManiaState(board)
         super().__init__(state)
 
     def actions(self, state: PipeManiaState):
-        """Retorna uma lista de ações que podem ser executadas a
-        partir do estado passado como argumento."""
+        """Returns a list of actions that can be executed from the state passed as an argument."""
         if state.board.invalid or not state.board.pieces_remaining():
             return []
-        (row, col) = state.board.get_next_piece()
-        possibilities = state.board.possibilities[(row, col)]
-        return map(lambda x: (row, col, x), possibilities)
+        piece = state.board.get_next_piece()
+        possibilities = state.board.possibilities[(piece[0], piece[1])]
+        return [(piece[0], piece[1], e) for e in possibilities]
 
     def result(self, state: PipeManiaState, action):
-        """Retorna o estado resultante de executar a 'action' sobre
-        'state' passado como argumento. A ação a executar deve ser uma
-        das presentes na lista obtida pela execução de
-        self.actions(state)."""
+        """Returns the state resulting from executing the 'action' on the 'state' passed as an argument.
+        The action to be executed must be one of those present in the list obtained by executing self.actions(state)."""
         (row, col, possibility) = action
         return PipeManiaState(state.board.set_piece(row, col, possibility))
 
     def goal_test(self, state: PipeManiaState):
-        """Retorna True se e só se o estado passado como argumento é
-        um estado objetivo. Deve verificar se todas as posições do tabuleiro
-        estão preenchidas de acordo com as regras do problema."""
-        return state.board.get_next_piece() == None #and state.board.check_goal()
+        """Returns True if and only if the state passed as an argument is a goal state.
+        It must verify if all positions on the board are filled according to the problem's rules."""
+        return state.board.get_next_piece() is None and state.board.check_goal()
 
     def h(self, node: Node):
-        """Função heuristica utilizada para a procura A*."""
+        """Heuristic function used for A* search."""
+        return node.state.board.num_locked_pieces()
 
 
 if __name__ == "__main__":
-    # Ler o ficheiro do standard input,
-    # Usar uma técnica de procura para resolver a instância,
-    # Retirar a solução a partir do nó resultante,
-    # Imprimir para o standard output no formato indicado.
+    # Read the file from standard input,
+    # Use a search technique to solve the instance,
+    # Extract the solution from the resulting node,
+    # Print to standard output in the indicated format.
 
     board = Board.parse_instance()
     problem = PipeMania(board)
-    # print(problem.initial.board.remaining_pieces)
-    # print(problem.initial.board, end='')
     goal_node = depth_first_tree_search(problem)
     print(goal_node.state.board, end='')
-    pass

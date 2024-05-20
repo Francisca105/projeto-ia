@@ -106,6 +106,10 @@ class Board:
         self.size = len(pieces)
         self.invalid = False
 
+    def get_size(self):
+        """Returns the board size."""
+        return self.size
+
     def get_type(self, row: int, col: int):
         """Returns the type of the given piece."""
         def num_connections(piece) -> int:
@@ -459,7 +463,7 @@ class PipeMania(Problem):
 
     def h(self, node: Node):
         """Heuristic function used for A* search."""
-        return node.state.board.num_locked_pieces()
+        return node.state.board.get_size()**2 - node.state.board.num_locked_pieces()
 
 
 if __name__ == "__main__":

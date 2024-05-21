@@ -3,3 +3,6 @@ iart-proj-tester
 tests/
 out/
 out.txt
+
+15x15/
+csv/

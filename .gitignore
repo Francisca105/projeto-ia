@@ -6,3 +6,7 @@ out.txt
 
 15x15/
 csv/
+
+gif_maker/images/
+gif_maker/node_modules/
+gif_maker/package-lock.json

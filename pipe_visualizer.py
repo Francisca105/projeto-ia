@@ -18,6 +18,7 @@ from search import (
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from numpy import sqrt
 
 _it = 0
                     # up  , down , left, right
@@ -64,7 +65,7 @@ def visualize(grid):
                 axs[i, j].imshow(img)
 
         # Save the figure as an image file instead of showing it
-        plt.savefig('output'+ _it.__str__() +'.png', bbox_inches='tight')
+        plt.savefig('gif_maker/images/output'+ _it.__str__() +'.png', bbox_inches='tight')
 
 
 class Node:
@@ -195,6 +196,14 @@ class Board:
             self.remove_piece(row, col)
             self.update_adjacent(row, col)
 
+        global _it
+        _it+=1
+        board = Board(new_pieces)
+        grid = [line.strip().split("\t") for line in board.__str__().split("\n")]
+        grid.pop()
+        visualize(grid)
+
+
     def set_piece(self, row, col, piece):
         """Creates a new board and lock the given piece in the given coordinates."""
         pieces = self.pieces
@@ -213,6 +222,13 @@ class Board:
             new_board.possibilities.update({e:[x for x in self.possibilities[e]]})
         new_board.remove_possibility(row, col)
         new_board.update_adjacent(row, col)
+
+        global _it
+        _it+=1
+        board = Board(new_pieces)
+        grid = [line.strip().split("\t") for line in board.__str__().split("\n")]
+        grid.pop()
+        visualize(grid)
 
         return new_board
 
@@ -478,12 +494,6 @@ class PipeMania(Problem):
     def goal_test(self, state: PipeManiaState):
         """Returns True if and only if the state passed as an argument is a goal state.
         It must verify if all positions on the board are filled according to the problem's rules."""
-        global _it
-        _it+=1
-        grid = [line.strip().split("\t") for line in state.board.__str__().split("\n")]
-        grid.pop()
-        visualize(grid)
-
         return state.board.get_next_piece() is None and state.board.check_goal()
 
     def h(self, node: Node):
@@ -501,3 +511,8 @@ if __name__ == "__main__":
     problem = PipeMania(board)
     goal_node = depth_first_tree_search(problem)
     print(goal_node.state.board, end='')
+
+    _it=26
+    grid = [line.strip().split("\t") for line in board.__str__().split("\n")]
+    grid.pop()
+    visualize(grid)
